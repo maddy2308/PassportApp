@@ -9,6 +9,8 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var cookieParser = require('cookie-parser');
 var session = require('express-session');
+var mongoose = require('mongoose');
+var externalResources = require("./Server/resources/resources.js");
 
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
@@ -16,6 +18,9 @@ app.use(session({secret : 'this is a secret'}));
 app.use(cookieParser());
 app.use(passport.initialize());
 app.use(passport.session());
+
+/* Configure the database*/
+mongoose.connect(externalResources.reources['connectionUrl']);
 
 
 app.use(express.static(__dirname + '/public'));
@@ -28,15 +33,31 @@ app.listen(3000);
 // });
 
 
+// get DAO
+var userDAO = require('./Server/DAO/UserDao.js');
+
 
 
 passport.use(new LocalStrategy(function (username, password, done) {
-    for (var u in users) {
-        if (username == users[u].username && password == users[u].password) {
-            return done(null, users[u]);
+    // for (var u in users) {
+    //     if (username == users[u].username && password == users[u].password) {
+    //         return done(null, users[u]);
+    //     }
+    // }
+    // return done(null, false, {message : 'Unable to login'});
+
+    userDAO.service.isValidUser(username, password).then(function(user) {
+        if (!user) {
+            return done(null, false, {message : 'Unable to login'});
+        } else {
+            return done(null, user);
         }
-    }
-    return done(null, false, {message : 'Unable to login'});
+    }).catch (function(error) {
+        if (error) {
+            return done(error);
+        }
+    });
+
 }));
 
 // managing the session back and forth be user and server
@@ -73,3 +94,4 @@ var users = [
     {username : "bob", password : "bob", firstName : 'Bob', lastName : ''},
     {username : "charlie", password : "charlie", firstName : 'Charlie', lastName : ''}
 ];
+

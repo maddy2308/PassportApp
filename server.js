@@ -7,6 +7,7 @@ var upload = multer({ dest: './uploads' });
 
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
+var FacebookStrategy = require('passport-facebook').Strategy;
 var cookieParser = require('cookie-parser');
 var session = require('express-session');
 var mongoose = require('mongoose');
@@ -60,6 +61,14 @@ passport.use(new LocalStrategy(function (username, password, done) {
 
 }));
 
+var facebookConfig = {
+    clientID : 'YOUR APP ID/ YOUR CLIENT ID',
+    clientSecret : 'YOUR CLIENT SECRET',
+    callbackURL : '/auth/facebook/callback'
+};
+
+passport.use('facebook', new FacebookStrategy(facebookConfig, facebookLogin));
+
 // managing the session back and forth be user and server
 passport.serializeUser(function(user, done) {
    done(null, user);
@@ -95,3 +104,36 @@ var users = [
     {username : "charlie", password : "charlie", firstName : 'Charlie', lastName : ''}
 ];
 
+app.get("/auth/facebook", passport.authenticate('facebook'));
+
+app.get("/auth/facebook/callback", passport.authenticate('facebook', {
+    successRedirect : '/#/profile',
+    failureRedirect : '/#/login'
+}));
+
+
+function facebookLogin (token, refreshToken, profile, done) {
+    console.log(profile);
+    userDAO.service.findFacebookUser(profile.id)
+        .then(function (facebookUser) {
+            if (facebookUser) {
+                return done(null, facebookUser);
+            } else {
+                facebookUser = {
+                    username: profile.displayName.replace(/ /g, ''),
+                    facebook : {
+                        token : token,
+                        id : profile.id,
+                        displayName : profile.displayName
+                    }
+                };
+                userDAO.service.createUser(facebookUser).then(function(newUser){
+                    return done(null, newUser);
+                }).catch(function(error) {
+                   console.log(error);
+                });
+            }
+        }).catch(function(error) {
+
+    });
+}

@@ -6,7 +6,9 @@
     var userModel = mongoose.model('user', User.UserSchema);
 
     exports.service = {
-        isValidUser: isValidUser
+        isValidUser: isValidUser,
+        findFacebookUser: findFacebookUser,
+        createUser: createUser
     };
 
 
@@ -19,5 +21,14 @@
             }
         });
     }
+
+    function findFacebookUser (id) {
+        return userModel.findOne({"facebook.id" : id});
+    }
+
+    function createUser(user) {
+        return userModel.create(user);
+    }
+
 })();
 
